@@ -1,30 +1,118 @@
 package com.example.notesapp.ui.add_edit_note
 
+import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.notesapp.AppViewModelProvider
 import com.example.notesapp.R
 import com.example.notesapp.ui.NotesTopAppBar
+import kotlinx.coroutines.flow.collectLatest
 
+
+@Preview(showBackground = true)
+@Composable
+fun DialogWindowPreview(){
+    DialogWindow (
+        onDismiss = {}
+    )
+}
+
+
+@Composable
+fun DialogWindow(
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Card(
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth()
+                .heightIn(min = 180.dp),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "You can't save an empty note",
+                    style = MaterialTheme.typography.titleMedium,
+                    //fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(43.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(48.dp)
+                ) {
+                    Text(
+                        text = "OK",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
+        }
+    }
+}
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditNoteScreen(
     navigateUp: ()-> Unit,
     viewModel: AddEditNoteViewModel =viewModel(factory=AppViewModelProvider.Factory)
 ){
 
+    val isAlertDialogVisible by viewModel.isAlertDialogVisible.collectAsState()
     val noteTitle by viewModel.noteTitle.collectAsState()
     val noteBody by viewModel.noteBody.collectAsState()
 
@@ -40,7 +128,6 @@ fun AddEditNoteScreen(
             FloatingActionButton(
                 onClick = {
                     viewModel.onEvent(AddEditNoteEvent.SaveNote)
-                    navigateUp()
                 }
             ) {
                 Icon(
@@ -51,6 +138,14 @@ fun AddEditNoteScreen(
         }
 
     ){ innerPadding ->
+
+        LaunchedEffect(true) {
+            viewModel.eventFlow.collectLatest {
+                when(it){
+                    is UiEvent.NavigateUp->navigateUp()
+                }
+            }
+        }
 
         Column(
             modifier = Modifier.padding(innerPadding)
@@ -64,20 +159,29 @@ fun AddEditNoteScreen(
                 },
 
                 isHintVisible = noteTitle.isHintVisible,
-                placeholder = "Enter your title",
+                placeholder = noteTitle.hint,
                 singleLine = true,
                 textStyle = MaterialTheme.typography.headlineLarge
             )
+            AnimatedVisibility(
+                visible = isAlertDialogVisible
+            ) {
+                DialogWindow (
+                    onDismiss = {
+                        viewModel.onEvent(AddEditNoteEvent.AlertDialogVisibilityChanged)
+                    }
+                )
+            }
 
             InvisibleTextField(
                 modifier = Modifier.padding(8.dp),
                 value = noteBody.text,
                 onValueChange = {
                     viewModel.onEvent(AddEditNoteEvent.BodyChanged(it))
-                    viewModel.onEvent(AddEditNoteEvent.BodyFocusChange)
+                    viewModel.onEvent(AddEditNoteEvent.BodyFocusChanged)
                 },
                 isHintVisible = noteBody.isHintVisible,
-                placeholder = "Your note body is here",
+                placeholder = noteBody.hint,
                 textStyle = MaterialTheme.typography.bodyLarge
             )
 

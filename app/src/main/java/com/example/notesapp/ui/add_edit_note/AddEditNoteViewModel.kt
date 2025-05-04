@@ -1,15 +1,22 @@
 package com.example.notesapp.ui.add_edit_note
 
+import android.util.Log
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.toRoute
 import com.example.notesapp.data.Note
 import com.example.notesapp.data.NotesRepository
 import com.example.notesapp.ui.NotesDestination
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 class AddEditNoteViewModel(
@@ -19,11 +26,18 @@ class AddEditNoteViewModel(
 
 
     private var noteId: Int? = null
-    private var _noteTitle = MutableStateFlow(NoteTextFieldState())
+
+    private var _isAlertDialogVisible = MutableStateFlow(false)
+    val isAlertDialogVisible: StateFlow<Boolean> = _isAlertDialogVisible
+
+    private val _eventFlow = MutableSharedFlow<UiEvent>()
+    val eventFlow = _eventFlow.asSharedFlow()
+
+    private var _noteTitle = MutableStateFlow(NoteTextFieldState(hint = "Enter your title"))
     val noteTitle: StateFlow<NoteTextFieldState> = _noteTitle
 
 
-    private var _noteBody = MutableStateFlow(NoteTextFieldState())
+    private var _noteBody = MutableStateFlow(NoteTextFieldState(hint = "Your note body is here"))
     val noteBody: StateFlow<NoteTextFieldState> = _noteBody
 
 
@@ -34,11 +48,11 @@ class AddEditNoteViewModel(
                 if (thisNoteId != null) {
                     noteId=thisNoteId
                     notesRepository.getNoteStream(thisNoteId)?.also { note->
-                        _noteTitle.value=NoteTextFieldState(
+                        _noteTitle.value=noteTitle.value.copy(
                             text = note.title,
                             isHintVisible = false
                         )
-                        _noteBody.value=NoteTextFieldState(
+                        _noteBody.value=noteBody.value.copy(
                             text = note.body,
                             isHintVisible = false
                         )
@@ -48,6 +62,10 @@ class AddEditNoteViewModel(
             }
         }
 
+    }
+
+    fun validateInput(): Boolean{
+        return noteTitle.value.text.isNotBlank() || noteBody.value.text.isNotBlank()
     }
 
     fun onEvent(event: AddEditNoteEvent){
@@ -63,7 +81,7 @@ class AddEditNoteViewModel(
                 )
             }
 
-            is AddEditNoteEvent.BodyFocusChange ->{
+            is AddEditNoteEvent.BodyFocusChanged ->{
                 _noteBody.value = _noteBody.value.copy(
                     isHintVisible = noteBody.value.text.isBlank()
                 )
@@ -76,19 +94,33 @@ class AddEditNoteViewModel(
             }
 
             is AddEditNoteEvent.SaveNote ->{
-                viewModelScope.launch {
-                    notesRepository.addNote(
-                        Note(
-                            id = noteId,
-                            title = noteTitle.value.text,
-                            body = noteBody.value.text
+                if (validateInput()){
+                    viewModelScope.launch {
+                        notesRepository.addNote(
+                            Note(
+                                id = noteId,
+                                title = noteTitle.value.text,
+                                body = noteBody.value.text
+                            )
                         )
-                    )
+                        _eventFlow.emit(UiEvent.NavigateUp)
+                    }
                 }
+                else{
+                    _isAlertDialogVisible.value = true
+                }
+            }
+
+            is AddEditNoteEvent.AlertDialogVisibilityChanged->{
+                _isAlertDialogVisible.value= !isAlertDialogVisible.value
             }
         }
     }
 
+}
+
+sealed class UiEvent{
+    data object NavigateUp:UiEvent()
 }
 
 data class NoteTextFieldState(
