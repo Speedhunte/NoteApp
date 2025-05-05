@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.notesapp"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.compose.material.icons.extended)
     implementation(libs.kotlinx.serialization.json.v150)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

@@ -1,20 +1,14 @@
 package com.example.notesapp.ui.add_edit_note
 
-import android.util.Log
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.example.notesapp.data.Note
 import com.example.notesapp.data.NotesRepository
-import com.example.notesapp.ui.NotesDestination
+import com.example.notesapp.ui.main_screen.NotesDestination
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -64,7 +58,7 @@ class AddEditNoteViewModel(
 
     }
 
-    fun validateInput(): Boolean{
+    private fun validateInput(): Boolean{
         return noteTitle.value.text.isNotBlank() || noteBody.value.text.isNotBlank()
     }
 
@@ -100,7 +94,8 @@ class AddEditNoteViewModel(
                             Note(
                                 id = noteId,
                                 title = noteTitle.value.text,
-                                body = noteBody.value.text
+                                body = noteBody.value.text,
+                                timestamp = System.currentTimeMillis()
                             )
                         )
                         _eventFlow.emit(UiEvent.NavigateUp)

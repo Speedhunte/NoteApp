@@ -13,8 +13,10 @@ activityCompose = "1.10.1"
 composeBom = "2024.09.00"
 navigationCompose = "2.8.9"
 roomRuntimeAndroid = "2.7.1"
+compose-material = "1.6.0"
 
 [libraries]
+compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "compose-material" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version ="1.6.3" }
 kotlinx-serialization-json-v150 = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 room-runtime = { module = "androidx.room:room-runtime", version = "2.6.1" }

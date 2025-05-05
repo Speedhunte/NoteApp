@@ -1,9 +1,13 @@
-package com.example.notesapp.ui
+package com.example.notesapp.ui.main_screen
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
@@ -11,6 +15,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
@@ -34,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,9 +51,11 @@ import com.example.notesapp.AppViewModelProvider
 import com.example.notesapp.R
 import com.example.notesapp.data.Note
 import com.example.notesapp.ui.add_edit_note.AddEditNoteScreen
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 sealed interface NotesDestination{
     @Serializable
@@ -57,18 +65,25 @@ sealed interface NotesDestination{
     data class DetailsScreen(val noteId : Int?): NotesDestination
 }
 
+fun formatDate(timestamp: Long): String {
+    val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+        .withZone(ZoneId.systemDefault())
+    return formatter.format(Instant.ofEpochMilli(timestamp))
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesTopAppBar(
     title: String,
     canNavigateBack: Boolean,
-    navigateUp: ()->Unit={}
+    navigateUp: ()->Unit={},
 ){
     CenterAlignedTopAppBar(
         title = {
             Text(text = title)
         },
+
         navigationIcon = {
             if(canNavigateBack){
                 IconButton(
@@ -81,6 +96,7 @@ fun NotesTopAppBar(
                 }
             }
         },
+
     )
 }
 
@@ -118,15 +134,17 @@ fun HomeScreen(
 ){
 
     val homeUiState by viewModel.homeUiState.collectAsState()
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold (
+        //Modifier.background(color = MaterialTheme.colorScheme.)
         snackbarHost = {SnackbarHost(hostState = snackbarHostState)},
         topBar = {
             NotesTopAppBar(
-              title = stringResource(R.string.bar_title),
-                canNavigateBack = false
+                title = stringResource(R.string.bar_title),
+                canNavigateBack = false,
             )
 
         },
@@ -141,33 +159,76 @@ fun HomeScreen(
             }
         },
 
-    ){ innerPadding->
+    ){innerPadding->
         if(homeUiState.notes.isEmpty()){
             Text(
-                modifier = Modifier.fillMaxWidth().padding(innerPadding),
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
                 textAlign = TextAlign.Center,
                 text = "Currently you have  no notes",
                 style = MaterialTheme.typography.titleLarge
             )
         }
         else {
-            NotesItemList(
-                items = homeUiState.notes,
-                navigateToNote = navigateToNote,
-                onDeleteNote ={
-                    viewModel.deleteNote(it)
-                    scope.launch {
-                        val snackbarResult = snackbarHostState.showSnackbar(
-                            message = "Note deleted",
-                            actionLabel = "Undo"
-                        )
-                        if(snackbarResult== SnackbarResult.ActionPerformed){
-                            viewModel.restoreNote()
+            Column(
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                Row (
+                    modifier = Modifier.height(70.dp)
+                ){
+                    AnimatedVisibility(visible = homeUiState.isSortSectionVisible) {
+                        Column {
+                            Text(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Normal ),
+                                text = "Sort by date:"
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            )
+                            {
+                                SortRadioButton(
+                                    currentOrderType = homeUiState.orderType,
+                                    buttonOrderType = OrderType.Ascending,
+                                    onClick = viewModel::onOrderTypeUpdated,
+                                    buttonName = "Ascending"
+                                )
+                                SortRadioButton(
+                                    currentOrderType = homeUiState.orderType,
+                                    buttonOrderType = OrderType.Descending,
+                                    onClick = viewModel::onOrderTypeUpdated,
+                                    buttonName = "Descending"
+                                )
+                            }
                         }
                     }
-                  },
-                contentPadding = innerPadding
-            )
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(
+                        onClick = viewModel::onSortSectionVisibilityChanged
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = null
+                        )
+                    }
+                }
+
+                NotesItemList(
+                    items = homeUiState.notes,
+                    navigateToNote = navigateToNote,
+                    onDeleteNote ={
+                        viewModel.deleteNote(it)
+                        scope.launch {
+                            val snackbarResult = snackbarHostState.showSnackbar(
+                                message = "Note deleted",
+                                actionLabel = "Undo"
+                            )
+                            if(snackbarResult== SnackbarResult.ActionPerformed){
+                                viewModel.restoreNote()
+                            }
+                        }
+                    },
+                )
+            }
         }
     }
 }
@@ -177,10 +238,10 @@ fun NotesItemList(
     items: List<Note>,
     onDeleteNote: (Note) -> Unit,
     navigateToNote: (Int) -> Unit,
-    contentPadding: PaddingValues
+    //contentPadding: PaddingValues = PaddingValues(10.dp)
 ){
     LazyVerticalStaggeredGrid(
-        contentPadding = contentPadding,
+        //contentPadding = PaddingValues(top = 10.dp),
         columns = StaggeredGridCells.Adaptive(150.dp)
 
     ) {
@@ -209,29 +270,42 @@ fun NoteCardItem(
         elevation = CardDefaults.cardElevation(4.dp)
     ){
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ){
 
             Text(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(top = 8.dp),
                 text = note.title,
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                modifier=Modifier.padding(8.dp),
+                modifier=Modifier,
                 text = note.body,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 5
             )
-
-            IconButton(
-                modifier = Modifier.align(Alignment.End),
-                onClick = {onDeleteNote(note)}
-            ) {
-                Icon(
-
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null
+            Row (
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ){
+                Text(
+                    text = formatDate(note.timestamp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline
                 )
+
+
+                IconButton(
+                    onClick = {onDeleteNote(note)}
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        tint = MaterialTheme.colorScheme.error,
+                        contentDescription = null
+                    )
+                }
             }
 
         }

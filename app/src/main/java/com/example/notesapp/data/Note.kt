@@ -8,7 +8,8 @@ data class Note(
     @PrimaryKey(autoGenerate = true)
     val id: Int? = null,
     val title: String,
-    val body: String
+    val body: String,
+    val timestamp: Long
 )
 
 

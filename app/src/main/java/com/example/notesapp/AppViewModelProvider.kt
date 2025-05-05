@@ -5,7 +5,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.notesapp.ui.HomeViewModel
+import com.example.notesapp.ui.main_screen.HomeViewModel
 import com.example.notesapp.ui.add_edit_note.AddEditNoteViewModel
 
 
